@@ -65,6 +65,7 @@ input,select{width:100%;margin-top:4px;padding:10px 12px;border-radius:12px;bord
 .rd input:checked+span:before{border-color:#fff;background:#fff;box-shadow:inset 0 0 0 2px var(--pri);opacity:1}
 .rd input:focus-visible+span{outline:2px solid var(--a);outline-offset:2px}
 .two2{display:flex;gap:8px}
+.rg.tight .rd span:before{display:none}.rg.tight .rd span{padding:8px 4px;font-size:13.5px}
 </style>
 </head>
 <body>
@@ -93,7 +94,7 @@ let tab='home',sub='ln',oe=null;
 function sheet(ti,f,cb,dl){
   const o=document.createElement('div');o.className='ov';
   const fld=x=>{let c;
-    if(x.t=='radio')c=`<div class="rg">${x.o.map(p=>`<label class="rd"><input type="radio" name="${x.k}" value="${esc(p[0])}"${p[0]==x.v?' checked':''}><span>${p[1]}</span></label>`).join('')}</div>`;
+    if(x.t=='radio')c=`<div class="rg ${x.cls||''}">${x.o.map(p=>`<label class="rd"><input type="radio" name="${x.k}" value="${esc(p[0])}"${p[0]==x.v?' checked':''}><span>${p[1]}</span></label>`).join('')}</div>`;
     else if(x.t=='select')c=`<select>${x.o.map(p=>`<option value="${esc(p[0])}"${p[0]==x.v?' selected':''}>${p[1]}</option>`).join('')}</select>`;
     else c=`<input type="${x.t||'text'}" ${x.t=='number'?'inputmode="decimal" step="any"':''} value="${esc(x.v)}">`;
     return `<div class="fl" data-k="${x.k}"${x.sh?` data-sh='${JSON.stringify(x.sh)}'`:''}><div class="lb">${x.l}</div>${c}</div>`};
@@ -107,7 +108,7 @@ function sheet(ti,f,cb,dl){
   o.querySelector('#ok').onclick=()=>{const r=get();
     if(f.some(x=>x.req&&!D(x.k).hidden&&!(r[x.k]>0))){o.querySelector('.er').textContent='সঠিক পরিমাণ লিখুন';return}
     f.forEach(x=>{if(x.t=='number'&&isNaN(r[x.k]))r[x.k]=0});
-    cb(r);o.remove();save();render()};
+    const er=cb(r);if(typeof er=='string'){o.querySelector('.er').textContent=er;return}o.remove();save();render()};
   if(dl)o.querySelector('#dl').onclick=()=>{dl();o.remove();save();render()};
 }
 
@@ -116,7 +117,7 @@ function addLoan(q){const id=uid();S.ln.push({id,dir:q.dir,who:q.who,a:q.a,note:
 
 function txForm(t,pre){
   const ed=!!t,uq=a=>[...new Set(a)],pk=a=>a.length?[...a.map(n=>[n,esc(n)]),['','নতুন নাম']]:null;
-  const F=[{k:'s',l:'ধরন',t:'radio',o:ed?[['in','আয়'],['out','খরচ']]:[['in','আয়'],['out','খরচ'],['loan','ধার'],['sav','সঞ্চয়'],['tr','ট্রানজিট']],v:ed?(t.s>0?'in':'out'):(pre||'out')}];
+  const F=[{k:'s',l:'ধরন',t:'radio',o:ed?[['in','আয়'],['out','খরচ']]:[['in','আয়'],['out','খরচ'],['loan','ধার'],['sav','সঞ্চয়'],['tr','ট্রানজিট'],['tf','ট্রান্সফার']],cls:'tight',v:ed?(t.s>0?'in':'out'):(pre||'out')}];
   if(!ed){
     F.push({k:'dir',l:'দেনা নাকি পাওনা',t:'radio',o:[['g','পাওনা (দিয়েছি)'],['t','দেনা (নিয়েছি)']],v:'g',sh:{s:['loan']}});
     F.push({k:'sd',l:'জমা নাকি তোলা',t:'radio',o:[['dep','জমা করলাম'],['wd','তুললাম']],v:'dep',sh:{s:['sav']}});
@@ -124,12 +125,15 @@ function txForm(t,pre){
     [['lp',uq(S.ln.map(l=>l.who.trim())),'loan'],['sp',S.sv.map(s=>s.n),'sav'],['tp',uq(S.tr.map(x=>x.who)),'tr']].forEach(([k,a,s])=>{const o=pk(a);if(o)F.push({k,l:'আগের নাম থেকে বেছে নিন',t:'radio',o,v:'',sh:{s:[s]}})});
     F.push({k:'nm',l:'নাম (নতুন হলে এখানে লিখুন) — ব্যক্তি/সংস্থা বা সঞ্চয়ের নাম',v:'',sh:{s:['loan','sav','tr']}});
   }
+  if(!ed)F.push({k:'fw',l:'কোন ওয়ালেট থেকে (টাকা বের হবে)',t:'radio',o:wo(),v:S.w[0].id,sh:{s:['tf']}},{k:'tw',l:'কোন ওয়ালেটে (টাকা ঢুকবে)',t:'radio',o:wo(),v:(S.w[1]||S.w[0]).id,sh:{s:['tf']}});
   F.push({k:'a',l:'পরিমাণ (৳)',t:'number',req:1,v:t?t.a:''},
-    {k:'w',l:'কোন ওয়ালেট',t:'radio',o:wo(),v:t?t.w:S.w[0].id},
+    {k:'chg',l:'ক্যাশআউট চার্জ (থাকলে লিখুন, ঐচ্ছিক)',t:'number',v:0,sh:{s:['tf']}},
+    {k:'w',l:'কোন ওয়ালেট',t:'radio',o:wo(),v:t?t.w:S.w[0].id,sh:{s:['in','out','loan','sav','tr']}},
     {k:'kind',l:'ব্যক্তিগত নাকি ব্যবসায়িক',t:'radio',o:[['p','ব্যক্তিগত'],['b','ব্যবসায়িক']],v:t?t.kind:'p',sh:{s:['in','out']}},
     {k:'note',l:'বিবরণ',v:t?t.note:''},{k:'d',l:'তারিখ',t:'date',v:t?t.d:today});
   sheet(ed?'লেনদেন সম্পাদনা':'নতুন লেনদেন',F,r=>{
     const d=r.d||today,nm=(r.lp||r.sp||r.tp||r.nm||'').trim();
+    if(r.s=='tf'){if(r.fw==r.tw)return 'দুটি আলাদা ওয়ালেট বাছুন';tfAdd({f:+r.fw,t:+r.tw,a:r.a,c:r.chg,d,note:r.note});return}
     if(ed||r.s=='in'||r.s=='out'){const n={id:t?t.id:uid(),s:r.s=='in'?1:-1,a:r.a,w:+r.w,kind:r.kind,note:r.note,d};if(t&&t.ev)n.ev=t.ev;if(t)S.t[S.t.indexOf(t)]=n;else S.t.push(n)}
     else if(r.s=='loan')addLoan({dir:r.dir,who:nm||'নামহীন',a:r.a,w:+r.w,note:r.note,d});
     else if(r.s=='sav'){const n=nm||'সঞ্চয়';let s=S.sv.find(x=>x.n==n);if(!s){s={id:uid(),n,a:0};S.sv.push(s)}const g=r.sd=='dep'?1:-1;s.a=Math.max(0,s.a+g*r.a);
@@ -139,7 +143,7 @@ function txForm(t,pre){
       else S.t.push({id:uid(),trid:x.id,s:-1,a:r.a,w:+r.w,kind:'x',note:'ট্রানজিট হস্তান্তর: '+n,d})}
   },t&&(()=>{S.t=S.t.filter(x=>x!=t)}));
 }
-const editTx=id=>{const t=S.t.find(x=>x.id==id);if(t&&t.kind!='x'&&t.w&&!t.lead)txForm(t)};
+const editTx=id=>{const t=S.t.find(x=>x.id==id);if(t&&t.tf)return tfEdit(t.tf);if(t&&t.kind!='x'&&t.w&&!t.lead)txForm(t)};
 
 function walletForm(w){
   sheet(w?'ওয়ালেট সম্পাদনা':'নতুন ওয়ালেট',[{k:'n',l:'নাম (যেমন: নগদ, ডাচ-বাংলা ব্যাংক)',v:w?w.n:''},{k:'b',l:'শুরুর ব্যালেন্স (৳)',t:'number',v:w?w.b:0}],
@@ -198,6 +202,15 @@ function fbar(){
   if(F.k=='mo')pk=`<div class="two2"><select onchange="F.m=this.value;render()">${MN.map((n,i)=>{const v=String(i+1).padStart(2,'0');return `<option value="${v}"${v==F.m?' selected':''}>${n}</option>`}).join('')}</select>${ys}</div>`;
   if(F.k=='yr')pk=ys;
   return `<div class="seg">${seg}</div>${pk}<small style="display:block;margin:8px 2px 0">${rl()}</small>`}
+function tfAdd(q){const id=uid(),n='ট্রান্সফার: '+wn(q.f)+' → '+wn(q.t)+(q.note?' · '+q.note:'');
+  S.t.push({id:uid(),tf:id,s:-1,a:q.a,w:q.f,kind:'x',note:n,d:q.d},{id:uid(),tf:id,s:1,a:q.a,w:q.t,kind:'x',note:n,d:q.d});
+  if(q.c>0)S.t.push({id:uid(),tf:id,chg:1,s:-1,a:q.c,w:q.f,kind:'p',note:'ট্রান্সফার চার্জ',d:q.d})}
+function tfEdit(id){const R=S.t.filter(x=>x.tf==id),o=R.find(x=>x.s<0&&!x.chg),i=R.find(x=>x.s>0),c=R.find(x=>x.chg);if(!o||!i)return;
+  sheet('ট্রান্সফার এডিট',[{k:'fw',l:'কোন ওয়ালেট থেকে (টাকা বের হয়েছে)',t:'radio',o:wo(),v:o.w},{k:'tw',l:'কোন ওয়ালেটে (টাকা ঢুকেছে)',t:'radio',o:wo(),v:i.w},{k:'a',l:'পরিমাণ (৳)',t:'number',req:1,v:o.a},{k:'c',l:'চার্জ (ঐচ্ছিক)',t:'number',v:c?c.a:0},{k:'d',l:'তারিখ',t:'date',v:o.d}],
+  r=>{if(r.fw==r.tw)return 'দুটি আলাদা ওয়ালেট বাছুন';const d=r.d||o.d,n='ট্রান্সফার: '+wn(+r.fw)+' → '+wn(+r.tw);
+    Object.assign(o,{w:+r.fw,a:r.a,d,note:n});Object.assign(i,{w:+r.tw,a:r.a,d,note:n});
+    S.t=S.t.filter(x=>x!=c);if(r.c>0)S.t.push({id:c?c.id:uid(),tf:id,chg:1,s:-1,a:r.c,w:+r.fw,kind:'p',note:'ট্রান্সফার চার্জ',d})},
+  ()=>{S.t=S.t.filter(x=>x.tf!=id)})}
 const iconTx=t=>t.kind=='x'?['dn',' a']:t.s>0?['dn','g']:['up','r'];
 function txItem(t){
   const c=t.kind=='x'?'a':t.s>0?'g':'r';
@@ -212,7 +225,7 @@ home(){
   const inc=sum(mt.filter(x=>x.s>0),x=>x.a),ex=sum(mt.filter(x=>x.s<0),x=>x.a);
   return `<small>আসসালামু আলাইকুম</small><h2>আমার হিসাব</h2>
   <div class="hero"><small>বর্তমান লিকুইড ব্যালেন্স</small><h1>${fmt(n.L)}</h1><div class="two"><div><small>এ মাসে আয় (ব্যক্তিগত)</small><b>${fmt(inc)}</b></div><div><small>এ মাসে খরচ (ব্যক্তিগত)</small><b>${fmt(ex)}</b></div></div></div>
-  <div class="chips">${S.w.map(w=>`<button class="chip" onclick="editW(${w.id})"><small>${esc(w.n)}</small><b>${fmt(bal(w))}</b></button>`).join('')}<button class="chip" onclick="walletForm()"><small>নতুন</small><b>+ ওয়ালেট</b></button></div>
+  <div class="chips">${S.w.map(w=>`<button class="chip" onclick="editW(${w.id})"><small>${esc(w.n)}</small><b>${fmt(bal(w))}</b></button>`).join('')}<button class="chip" onclick="txForm(null,'tf')"><small>ক্যাশ আউট / ইন</small><b>ট্রান্সফার</b></button><button class="chip" onclick="walletForm()"><small>নতুন</small><b>+ ওয়ালেট</b></button></div>
   <div class="card"><div class="row"><b>মোট নিট সম্পদ</b><span class="tot">${fmt(n.n)}</span></div>
   <div class="row"><small>ওয়ালেটে নগদ</small><span>${fmt(n.L)}</span></div><div class="row"><small>সঞ্চয়</small><span>${fmt(n.sv)}</span></div><div class="row"><small>অন্যের কাছে পাওনা</small><span class="g">+${fmt(n.rc)}</span></div><div class="row"><small>আমার দেনা</small><span class="r">−${fmt(n.py)}</span></div><div class="row"><small>ট্রানজিট ফান্ড (অন্যের টাকা)</small><span class="a">−${fmt(n.h)}</span></div></div>
   <div class="card"><b>সাম্প্রতিক লেনদেন</b>${S.t.length?S.t.slice(-4).reverse().map(txItem).join(''):'<div class="emp">এখনো কোনো লেনদেন নেই। নিচের + বাটনে চাপুন।</div>'}</div>`},
