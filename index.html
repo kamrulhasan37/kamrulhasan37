@@ -238,13 +238,14 @@ const tl=t=>{if(t.evfin)return 'ইভেন্টের মোট খরচ';if
   if(t.lid){const l=S.ln.find(x=>x.id==t.lid);return t.o?(t.w?(l&&l.dir=='g'?'ধার দেওয়া (পাওনা)':'ধার নেওয়া (দেনা)'):(l&&l.dir=='g'?'পাওনা (বাকি, টাকা দেওয়া হয়নি)':'দেনা (বাকি, টাকা নেওয়া হয়নি)')):(l&&l.dir=='g'?'পাওনা ফেরত পাওয়া':'দেনা পরিশোধ')}
   if(t.trid)return t.o?'ট্রানজিট: টাকা এসেছে':t.lead?'ট্রানজিটের বাকি অংশ আয়ে যোগ':'ট্রানজিট: হস্তান্তর';
   if(t.kind=='x')return t.s<0?'সঞ্চয়ে জমা':'সঞ্চয় থেকে তোলা';return t.s>0?'আয়':'খরচ'};
-function txMenu(id){const t=S.t.find(x=>x.id==id);if(!t)return;const o=document.createElement('div');o.className='ov';
+function txMenu(id){const t=gt(id);if(!t)return;const o=document.createElement('div');o.className='ov';
   o.innerHTML=`<div class="sh"><div class="hd"><b>${esc(t.note)||tl(t)}</b><button class="ib" aria-label="বন্ধ করুন">${ic('x')}</button></div><small>${tl(t)} · ${fmt(t.a)} · ${t.d}</small><button class="btn" data-a="v">বিস্তারিত দেখুন</button><button class="btn alt" data-a="e">এডিট</button><button class="btn del" data-a="d">মুছে ফেলুন</button></div>`;
   document.body.appendChild(o);o.onclick=e=>{if(e.target==o)o.remove()};o.querySelector('.ib').onclick=()=>o.remove();
   o.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>{o.remove();({v:txDetail,e:txEdit,d:txDel})[b.dataset.a](id)})}
-function txDetail(id){const t=S.t.find(x=>x.id==id);if(!t)return;const l=t.lid&&S.ln.find(x=>x.id==t.lid),x=t.trid&&S.tr.find(y=>y.id==t.trid),e=(t.ev||t.evfin)&&S.ev.find(y=>y.id==(t.ev||t.evfin));
+function txDetail(id){const t=gt(id);if(!t)return;const l=t.lid&&S.ln.find(x=>x.id==t.lid),x=t.trid&&S.tr.find(y=>y.id==t.trid),e=(t.ev||t.evfin)&&S.ev.find(y=>y.id==(t.ev||t.evfin));
   const R=[['ধরন',tl(t)],['পরিমাণ',(t.s>0?'+':'−')+fmt(t.a).replace('−','')],['ওয়ালেট',t.w?esc(wn(t.w)):'ওয়ালেটে প্রভাব নেই'],['তারিখ',t.d]];
   if(t.kind=='p'||t.kind=='b')R.push(['ক্ষেত্র',K[t.kind]]);
+  if(t.cnt>1)R.push(['কতগুলো ধারের লাইন মিটেছে',t.cnt.toLocaleString('bn-BD')+'টি']);
   if(t.note)R.push(['বিবরণ',esc(t.note)]);
   if(e)R.push(['ইভেন্ট',esc(e.n)]);
   if(l){R.push(['ব্যক্তি/সংস্থা',esc(l.who)]);if(t.o)R.push(['মোট ধার',fmt(l.a)],['এখনো বাকি',fmt(l.a-paid(l))]);if(l.note)R.push(['ধারের কারণ',esc(l.note)])}
@@ -253,7 +254,7 @@ function txDetail(id){const t=S.t.find(x=>x.id==id);if(!t)return;const l=t.lid&&
   o.innerHTML=`<div class="sh" style="border-radius:22px"><div class="hd"><b>লেনদেনের বিস্তারিত</b><button class="ib" aria-label="বন্ধ করুন">${ic('x')}</button></div>${R.map(r=>`<div class="row"><small>${r[0]}</small><b style="font-weight:500;text-align:right">${r[1]}</b></div>`).join('')}<button class="btn">ঠিক আছে</button></div>`;
   document.body.appendChild(o);o.onclick=e=>{if(e.target==o||e.target.closest('.ib,.btn'))o.remove()}}
 function txEdit(id){const t=S.t.find(x=>x.id==id);if(!t)return;
-  if(t.tf)return tfEdit(t.tf);if(t.lid)return t.o?lnEdit(t.lid):payEdit(id);
+  if(t.pg)return pgEdit(t.pg);if(t.tf)return tfEdit(t.tf);if(t.lid)return t.o?lnEdit(t.lid):payEdit(id);
   if(t.trid)return t.lead?leadEdit(id):trRec(id);
   if(t.kind=='x')return t.svid?svRecEdit(id):info('এটি সঞ্চয়ের পুরোনো এন্ট্রি। সঞ্চয়ের পরিমাণ ঠিক করতে আরও → সঞ্চয় অংশে যান, অথবা এটি মুছে নতুন করে যোগ করুন।');
   txForm(t)}
@@ -262,6 +263,7 @@ function leadEdit(id){const t=S.t.find(x=>x.id==id);sheet('আয়ের ত�
 function svRecEdit(id){const t=S.t.find(x=>x.id==id),s=S.sv.find(x=>x.id==t.svid);sheet('সঞ্চয়ের লেনদেন এডিট',[{k:'a',l:'পরিমাণ (৳)',t:'number',req:1,v:t.a},{k:'w',l:'কোন ওয়ালেট',t:'radio',o:wo(),v:t.w},{k:'d',l:'তারিখ',t:'date',v:t.d}],
   r=>{if(s)s.a=Math.max(0,s.a+(t.s<0?1:-1)*(r.a-t.a));t.a=r.a;t.w=+r.w;t.d=r.d||t.d})}
 function txDel(id){const t=S.t.find(x=>x.id==id);if(!t)return;
+  if(t.pg)return ask('একসাথে নেওয়া এই ফেরতের সব লাইন মুছে যাবে এবং ধারের বাকি আবার বাড়বে। নিশ্চিত?',()=>{S.t=S.t.filter(x=>x.pg!=t.pg);save();render()});
   ask((t.tf?'এই ট্রান্সফারের সব লাইন (চার্জসহ) মুছে যাবে।':t.lid&&t.o?'এই ধার এবং এর সব ফেরত/পরিশোধ মুছে যাবে।':'এই লেনদেনটি মুছে যাবে।')+' নিশ্চিত?',()=>{
     if(t.tf)S.t=S.t.filter(x=>x.tf!=t.tf);
     else if(t.lid&&t.o){S.ln=S.ln.filter(l=>l.id!=t.lid);S.t=S.t.filter(x=>x.lid!=t.lid)}
@@ -302,8 +304,15 @@ function lnMenu(id){const l=S.ln.find(x=>x.id==id);if(!l)return;const r=l.a-paid
   o.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>{o.remove();const a=b.dataset.a;if(a=='p')lnPay(l);else if(a=='e')lnEdit(id);else lnDel(id)})}
 function lnBulk(nm,dir){const ls=S.ln.filter(l=>l.who.trim()==nm&&l.dir==dir&&l.a-paid(l)>0).sort((a,b)=>ld(a)<ld(b)?-1:ld(a)>ld(b)?1:a.id-b.id),tot=sum(ls,l=>l.a-paid(l));if(!ls.length)return;
   sheet((dir=='g'?'ফেরত পেয়েছি':'পরিশোধ করেছি')+' — মোট বাকি '+fmt(tot),[{k:'a',l:'কত টাকা (৳)? আগের এন্ট্রি থেকে ক্রমানুসারে মিটবে',t:'number',req:1,v:''},{k:'w',l:'কোন ওয়ালেট',t:'radio',o:wo(),v:S.w[0].id},{k:'d',l:'তারিখ',t:'date',v:today}],
-  r=>{if(r.a>tot+0.001)return 'মোট বাকি '+fmt(tot)+'-এর চেয়ে বেশি লেখা যাবে না';let m=r.a;
-    for(const l of ls){if(m<=0.0001)break;const p=Math.min(m,l.a-paid(l));S.t.push({id:uid(),lid:l.id,s:dir=='g'?1:-1,a:p,w:+r.w,kind:'x',note:(dir=='g'?'ফেরত পেলাম: ':'পরিশোধ: ')+l.who,d:r.d||today});m-=p}})}
+  r=>{if(r.a>tot+0.001)return 'মোট বাকি '+fmt(tot)+'-এর চেয়ে বেশি লেখা যাবে না';let m=r.a;const pg=uid();
+    for(const l of ls){if(m<=0.0001)break;const p=Math.min(m,l.a-paid(l));S.t.push({id:uid(),pg,lid:l.id,s:dir=='g'?1:-1,a:p,w:+r.w,kind:'x',note:(dir=='g'?'ফেরত পেলাম: ':'পরিশোধ: ')+l.who,d:r.d||today});m-=p}})}
+const grp=L=>{const m={},o=[];L.forEach(t=>{if(t.pg){if(m[t.pg]){m[t.pg].a+=t.a;m[t.pg].cnt++;return}const c={...t,cnt:1};m[t.pg]=c;o.push(c)}else o.push(t)});o.forEach(c=>{if(c.cnt>1)c.note+=' (একসাথে)'});return o};
+const gt=id=>{const t=S.t.find(x=>x.id==id);if(t&&t.pg){const R=S.t.filter(x=>x.pg==t.pg);return{...t,a:sum(R,x=>x.a),cnt:R.length}}return t};
+function pgEdit(pg){const R=S.t.filter(x=>x.pg==pg);if(!R.length)return;const t=R[0];
+  sheet('একসাথে ফেরত — এডিট',[{k:'w',l:'কোন ওয়ালেট (পরিমাণ বদলাতে মুছে আবার ফেরত এন্ট্রি দিন)',t:'radio',o:wo(),v:t.w},{k:'d',l:'তারিখ',t:'date',v:t.d}],r=>{R.forEach(x=>{x.w=+r.w;x.d=r.d||x.d})},()=>{S.t=S.t.filter(x=>x.pg!=pg)})}
+const mig=()=>{const m={};S.t.forEach(t=>{if(t.lid&&!t.o&&!t.pg){const k=t.note+'|'+t.d+'|'+t.w;(m[k]=m[k]||[]).push(t)}});let ch=0;
+  Object.values(m).forEach(g=>{g.sort((a,b)=>a.id-b.id);let c=[g[0]];const fl=()=>{if(c.length>1){const pg=uid();c.forEach(t=>{t.pg=pg});ch=1}};
+    for(let i=1;i<g.length;i++){if(g[i].id-g[i-1].id<=3000)c.push(g[i]);else{fl();c=[g[i]]}}fl()});if(ch)save()};
 const iconTx=t=>t.kind=='x'?['dn',' a']:t.s>0?['dn','g']:['up','r'];
 function txItem(t){
   const c=t.kind=='x'?'a':t.s>0?'g':'r';
@@ -321,7 +330,7 @@ home(){
   <div class="chips">${S.w.map(w=>`<button class="chip" onclick="editW(${w.id})"><small>${esc(w.n)}</small><b>${fmt(bal(w))}</b></button>`).join('')}<button class="chip" onclick="walletForm()"><small>নতুন</small><b>+ ওয়ালেট</b></button></div>
   <div class="card"><div class="row"><b>মোট নিট সম্পদ</b><span class="tot">${fmt(n.n)}</span></div>
   <div class="row"><small>ওয়ালেটে নগদ</small><span>${fmt(n.L)}</span></div><div class="row"><small>সঞ্চয়</small><span>${fmt(n.sv)}</span></div><div class="row"><small>অন্যের কাছে পাওনা</small><span class="g">+${fmt(n.rc)}</span></div><div class="row"><small>আমার দেনা</small><span class="r">−${fmt(n.py)}</span></div><div class="row"><small>ট্রানজিট ফান্ড (অন্যের টাকা)</small><span class="a">−${fmt(n.h)}</span></div></div>
-  <div class="card"><b>সাম্প্রতিক লেনদেন</b>${S.t.length?[...S.t].sort(byD).slice(0,4).map(txItem).join(''):'<div class="emp">এখনো কোনো লেনদেন নেই। নিচের + বাটনে চাপুন।</div>'}</div>`},
+  <div class="card"><b>সাম্প্রতিক লেনদেন</b>${S.t.length?grp([...S.t].sort(byD)).slice(0,4).map(txItem).join(''):'<div class="emp">এখনো কোনো লেনদেন নেই। নিচের + বাটনে চাপুন।</div>'}</div>`},
 list(){const L=S.t.filter(inP),Lx=L.filter(x=>x.kind!='x'),[lo,hi]=prange(),row=(a,v,c)=>`<div class="row"><span>${a}</span><b class="${c||''}">${fmt(v)}</b></div>`;
   const bp=f=>{const b=S.t.filter(x=>x.kind=='b'&&f(x.d||''));return Math.max(0,sum(b.filter(x=>x.s>0),x=>x.a)-sum(b.filter(x=>x.s<0),x=>x.a))};
   let box;
@@ -329,7 +338,7 @@ list(){const L=S.t.filter(inP),Lx=L.filter(x=>x.kind!='x'),[lo,hi]=prange(),row=
     box=`<small style="display:block;margin-bottom:4px">ব্যবসা-সমন্বিত হিসাব: ব্যবসার খরচ বাদ দিয়ে</small>`+row('আয়',ti,'g')+row('খরচ',pex,'r')+row('আয় − খরচ',ti-pex)}
   else{const ins=sum(Lx.filter(x=>x.s>0),x=>x.a),outs=sum(Lx.filter(x=>x.s<0),x=>x.a);
     box=`<small style="display:block;margin-bottom:4px">সাধারণ হিসাব: ব্যক্তিগত ও ব্যবসায়িক সব আয়-খরচ।</small>`+row('আয়',ins,'g')+row('খরচ',outs,'r')+row('আয় − খরচ',ins-outs)}
-  return `<h2>সব লেনদেন</h2>${fbar(1)}<div class="card">${box}</div><div class="card">${L.length?[...L].sort(byD).map(txItem).join(''):'<div class="emp">এই সময়ে কোনো লেনদেন নেই</div>'}</div><small style="display:block;margin-top:10px">যেকোনো লেনদেন চেপে ধরে রাখলে বিস্তারিত দেখা, এডিট ও মুছে ফেলার অপশন আসবে।</small>`},
+  return `<h2>সব লেনদেন</h2>${fbar(1)}<div class="card">${box}</div><div class="card">${L.length?grp([...L].sort(byD)).map(txItem).join(''):'<div class="emp">এই সময়ে কোনো লেনদেন নেই</div>'}</div><small style="display:block;margin-top:10px">যেকোনো লেনদেন চেপে ধরে রাখলে বিস্তারিত দেখা, এডিট ও মুছে ফেলার অপশন আসবে।</small>`},
 biz(){const b=S.t.filter(x=>x.kind=='b'),[lo,hi]=prange(),sm=(a,f)=>sum(a.filter(f),x=>x.a);
   const P=a=>Math.max(0,sm(a,x=>x.s>0)-sm(a,x=>x.s<0));
   const bp=b.filter(inP),Ip=sm(bp,x=>x.s<0),Rp=sm(bp,x=>x.s>0),h=b.filter(x=>(x.d||'')<=hi),p=Math.max(0,P(h)-P(b.filter(x=>(x.d||'')<lo)));
@@ -375,7 +384,7 @@ function render(){
   $('#fab').innerHTML=ic('plus',24);
 }
 $('#fab').onclick=()=>{if(tab=='ev'){oe?evItemForm(S.ev.find(x=>x.id==oe)):evForm()}else if(tab=='more'){txForm(null,sub=='ln'?'loan':sub=='sv'?'sav':'tr')}else txForm(null)};
-render();
+mig();render();
 try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js');
 </script>
